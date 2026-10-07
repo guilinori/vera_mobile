@@ -50,7 +50,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
 
-  final String _groqApiKey = '';
+  final String _groqApiKey = ' YOUR_GROQ_API_KEY_HERE'; // Replace with
 
   // Manage sessions dynamically
   final List<ChatSession> _sessions = [
