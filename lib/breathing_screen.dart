@@ -1,12 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-
-class BreathingActivityRecord {
-  final String technique;
-  final String duration;
-  final String timestamp;
-
-  BreathingActivityRecord({required this.technique, required this.duration, required this.timestamp});
-}
 
 class BreathingScreen extends StatefulWidget {
   const BreathingScreen({super.key});
@@ -16,200 +9,277 @@ class BreathingScreen extends StatefulWidget {
 }
 
 class _BreathingScreenState extends State<BreathingScreen> {
-  String _selectedTechnique = 'Cycle Sighing';
-  int _selectedDurationSeconds = 300;
-  bool _isSessionActive = false;
+  String selectedTechnique = 'Cycle Sighing';
+  String selectedDuration = '10 secs';
+  bool isSessionActive = false;
   
-  final List<BreathingActivityRecord> _historyRecords = [
-    BreathingActivityRecord(technique: 'Cycle Sighing', duration: '5 mins', timestamp: '10:30 AM'),
-    BreathingActivityRecord(technique: 'Box Breathing', duration: '1 min', timestamp: '09:15 AM'),
-  ];
+  Timer? _timer;
+  int _totalSeconds = 10;
+  int _remainingSeconds = 10;
+  String _currentInstruction = 'Ready?';
 
-  void _startSession() {
+  final List<String> techniques = ['Cycle Sighing', 'Physiological Sigh', 'Box Breathing'];
+  final List<String> durations = ['10 secs', '1 min', '3 mins', '5 mins'];
+  
+  final List<String> activityHistory = [];
+
+  int _getSecondsFromDuration(String duration) {
+    switch (duration) {
+      case '10 secs':
+        return 10;
+      case '1 min':
+        return 60;
+      case '3 mins':
+        return 180;
+      case '5 mins':
+      default:
+        return 300;
+    }
+  }
+
+  void _startTimer() {
+    int durationSecs = _getSecondsFromDuration(selectedDuration);
     setState(() {
-      _isSessionActive = true;
+      isSessionActive = true;
+      _totalSeconds = durationSecs;
+      _remainingSeconds = durationSecs;
+      _currentInstruction = 'Inhale...';
     });
 
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted && _isSessionActive) {
-        setState(() {
-          _isSessionActive = false;
-          _historyRecords.insert(
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingSeconds > 1) {
+          _remainingSeconds--;
+          
+          // Calculate dynamic breathing phases based on elapsed time (every 4-second cycle)
+          int elapsed = _totalSeconds - _remainingSeconds;
+          int cycleTime = elapsed % 12; // 12-second block for Box / Cyclic patterns
+          
+          if (selectedTechnique == 'Box Breathing') {
+            if (cycleTime < 3) {
+              _currentInstruction = 'Inhale...';
+            } else if (cycleTime < 6) {
+              _currentInstruction = 'Hold...';
+            } else if (cycleTime < 9) {
+              _currentInstruction = 'Exhale...';
+            } else {
+              _currentInstruction = 'Hold...';
+            }
+          } else {
+            // Physiological / Cycle Sighing pattern
+            if (cycleTime < 4) {
+              _currentInstruction = 'Deep Inhale...';
+            } else if (cycleTime < 6) {
+              _currentInstruction = 'Quick Top-off Inhale...';
+            } else {
+              _currentInstruction = 'Slow Exhale...';
+            }
+          }
+        } else {
+          _stopTimer();
+          _currentInstruction = 'Completed!';
+          activityHistory.insert(
             0,
-            BreathingActivityRecord(
-              technique: _selectedTechnique,
-              duration: _formatDuration(_selectedDurationSeconds),
-              timestamp: TimeOfDay.now().format(context),
-            ),
+            '$selectedTechnique ($selectedDuration) completed at ${TimeOfDay.now().format(context)}',
           );
-        });
-      }
+        }
+      });
     });
   }
 
-  void _stopSession() {
+  void _stopTimer() {
+    _timer?.cancel();
     setState(() {
-      _isSessionActive = false;
+      isSessionActive = false;
+      _currentInstruction = 'Ready?';
     });
   }
 
-  String _formatDuration(int seconds) {
-    if (seconds < 60) return '$seconds secs';
-    return '${seconds ~/ 60} min${seconds > 60 ? 's' : ''}';
+  void _toggleSession() {
+    if (isSessionActive) {
+      _stopTimer();
+    } else {
+      _startTimer();
+    }
+  }
+
+  String _formatTime(int seconds) {
+    final int mins = seconds ~/ 60;
+    final int secs = seconds % 60;
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1128),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Breathing Exercises', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+        title: const Text('Breathing Exercises', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: ['Cycle Sighing', 'Physiological Sigh', 'Box Breathing'].map((technique) {
-                  final isSelected = _selectedTechnique == technique;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ChoiceChip(
-                      label: Text(technique, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.white70)),
-                      selected: isSelected,
-                      selectedColor: Colors.blue,
-                      backgroundColor: const Color(0xFF1E293B),
-                      onSelected: (selected) {
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Center-Aligned Technique Dropdown Container
+            Center(
+              child: Container(
+                width: 240,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade800),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedTechnique,
+                    isExpanded: true,
+                    dropdownColor: Colors.grey.shade900,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.cyanAccent),
+                    items: techniques.map((String technique) {
+                      return DropdownMenuItem<String>(
+                        value: technique,
+                        child: Text(technique, textAlign: TextAlign.center),
+                      );
+                    }).toList(),
+                    onChanged: isSessionActive ? null : (String? newValue) {
+                      if (newValue != null) {
                         setState(() {
-                          _selectedTechnique = technique;
+                          selectedTechnique = newValue;
                         });
-                      },
-                    ),
-                  );
-                }).toList(),
+                      }
+                    },
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [10, 60, 180, 300].map((sec) {
-                  final isSelected = _selectedDurationSeconds == sec;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ChoiceChip(
-                      label: Text(_formatDuration(sec), style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.white60)),
-                      selected: isSelected,
-                      selectedColor: Colors.blueAccent,
-                      backgroundColor: const Color(0xFF1E293B),
-                      onSelected: (selected) {
+            ),
+            const SizedBox(height: 12),
+            
+            // Center-Aligned Duration Dropdown Container
+            Center(
+              child: Container(
+                width: 240,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade800),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedDuration,
+                    isExpanded: true,
+                    dropdownColor: Colors.grey.shade900,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.cyanAccent),
+                    items: durations.map((String duration) {
+                      return DropdownMenuItem<String>(
+                        value: duration,
+                        child: Text(duration, textAlign: TextAlign.center),
+                      );
+                    }).toList(),
+                    onChanged: isSessionActive ? null : (String? newValue) {
+                      if (newValue != null) {
                         setState(() {
-                          _selectedDurationSeconds = sec;
+                          selectedDuration = newValue;
+                          _remainingSeconds = _getSecondsFromDuration(newValue);
                         });
-                      },
-                    ),
-                  );
-                }).toList(),
+                      }
+                    },
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
+            ),
+            const SizedBox(height: 24),
 
-              Container(
+            // Live Countdown Timer Circle Container with Dynamic Instructions
+            Center(
+              child: Container(
                 width: 220,
                 height: 220,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5), width: 2),
+                  border: Border.all(color: Colors.cyanAccent, width: 2),
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isSessionActive ? 'Breathe...' : 'Ready?',
-                        style: const TextStyle(color: Colors.cyanAccent, fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _formatDuration(_selectedDurationSeconds),
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _currentInstruction,
+                      style: const TextStyle(color: Colors.cyanAccent, fontSize: 16, fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isSessionActive ? _formatTime(_remainingSeconds) : selectedDuration,
+                      style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 24),
 
-              const Text(
-                'A 5-Min Reset Backed by Research',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 24),
-
-              ElevatedButton(
+            // Start / Stop Session Button
+            Center(
+              child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isSessionActive ? Colors.redAccent : Colors.blue,
+                  backgroundColor: isSessionActive ? Colors.redAccent : Colors.blueAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
-                onPressed: _isSessionActive ? _stopSession : _startSession,
-                child: Text(_isSessionActive ? 'Stop Session' : 'Start Session', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(height: 32),
-
-              const Align(
-                alignment: Alignment.centerLeft,
+                onPressed: _toggleSession,
                 child: Text(
-                  'BREATHING ACTIVITY RECORD',
-                  style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                  isSessionActive ? 'Stop Session' : 'Start Session',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 12),
+            ),
+            const SizedBox(height: 32),
 
-              if (_historyRecords.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'No breathing sessions recorded yet. Start a session above!',
-                    style: TextStyle(color: Colors.white60, fontSize: 13),
-                  ),
-                )
-              else
-                ..._historyRecords.map((record) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Fixed
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(record.technique, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 2),
-                              Text('Duration: ${record.duration}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                            ],
-                          ),
-                          Text(record.timestamp, style: const TextStyle(color: Colors.cyanAccent, fontSize: 12)),
-                        ],
-                      ),
-                    )),
-            ],
-          ),
+            // Breathing Activity Record Section
+            Align(
+              alignment: Alignment.centerLeft,
+              child: const Text(
+                'BREATHING ACTIVITY RECORD',
+                style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade900,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade800),
+              ),
+              child: activityHistory.isEmpty
+                  ? const Text(
+                      'No breathing sessions recorded yet. Start a session above!',
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: activityHistory.map((record) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text('• $record', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      )).toList(),
+                    ),
+            ),
+          ],
         ),
       ),
     );

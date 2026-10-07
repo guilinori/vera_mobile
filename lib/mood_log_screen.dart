@@ -72,61 +72,25 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
     });
   }
 
-  void _editEntry(int index) {
+  void _navigateToEditScreen(int index) async {
     final entry = _entries[index];
-    final TextEditingController editController = TextEditingController(text: entry.reflection);
-    String tempEmoji = entry.emotionEmoji;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Edit Mood Entry'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: _emojis.map((emoji) {
-                  return GestureDetector(
-                    onTap: () => setDialogState(() => tempEmoji = emoji),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: tempEmoji == emoji ? Colors.blue.withValues(alpha: 0.2) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: editController,
-                decoration: const InputDecoration(hintText: 'Update reflection...'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  entry.reflection = editController.text.trim();
-                  entry.emotionEmoji = tempEmoji;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+    final updatedEntry = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditMoodScreen(
+          initialEmoji: entry.emotionEmoji,
+          initialReflection: entry.reflection,
+          emojis: _emojis,
         ),
       ),
     );
+
+    if (updatedEntry != null && updatedEntry is Map<String, String>) {
+      setState(() {
+        entry.emotionEmoji = updatedEntry['emoji']!;
+        entry.reflection = updatedEntry['reflection']!;
+      });
+    }
   }
 
   @override
@@ -200,7 +164,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                         : emotionCounts.entries.map((e) => Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween, // Fixed
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(e.key, style: const TextStyle(fontSize: 24)),
                                   Text('${e.value} time(s) logged', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
@@ -216,7 +180,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                 ),
                 const SizedBox(height: 12),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Fixed
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: _emojis.map((emoji) {
                     final isSelected = _selectedEmoji == emoji;
                     return GestureDetector(
@@ -282,7 +246,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    child: const Text('No mood entries logged yet. Try recording one above!', style: TextStyle(color: Colors.black54, fontSize: 13)), // Fixed
+                    child: const Text('No mood entries logged yet. Try recording one above!', style: TextStyle(color: Colors.black54, fontSize: 13)),
                   )
                 else
                   ..._entries.asMap().entries.map((entryItem) {
@@ -300,28 +264,32 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(entry.emotionEmoji, style: const TextStyle(fontSize: 24)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  entry.reflection,
-                                  style: const TextStyle(color: Colors.black87, fontSize: 14),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.black54),
-                                onPressed: () => _editEntry(index),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                                onPressed: () => _deleteEntry(index),
+                              Text(entry.emotionEmoji, style: const TextStyle(fontSize: 28)),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.black54),
+                                    onPressed: () => _navigateToEditScreen(index),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                    onPressed: () => _deleteEntry(index),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
+                          Text(
+                            entry.reflection,
+                            style: const TextStyle(color: Colors.black87, fontSize: 14),
+                          ),
+                          const SizedBox(height: 12),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Fixed
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(entry.dateGroup, style: const TextStyle(color: Colors.black38, fontSize: 11)),
                               Text(entry.timestamp, style: const TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w500)),
@@ -334,6 +302,127 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Dedicated full-screen Edit Page (Notes style)
+class EditMoodScreen extends StatefulWidget {
+  final String initialEmoji;
+  final String initialReflection;
+  final List<String> emojis;
+
+  const EditMoodScreen({
+    super.key,
+    required this.initialEmoji,
+    required this.initialReflection,
+    required this.emojis,
+  });
+
+  @override
+  State<EditMoodScreen> createState() => _EditMoodScreenState();
+}
+
+class _EditMoodScreenState extends State<EditMoodScreen> {
+  late String _selectedEmoji;
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedEmoji = widget.initialEmoji;
+    _controller = TextEditingController(text: widget.initialReflection);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Edit Mood Entry', style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, {
+                'emoji': _selectedEmoji,
+                'reflection': _controller.text.trim(),
+              });
+            },
+            child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'CHOOSE EMOJI',
+              style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: widget.emojis.map((emoji) {
+                final isSelected = _selectedEmoji == emoji;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedEmoji = emoji),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.blue.withValues(alpha: 0.2) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isSelected ? Colors.blue : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'REFLECTION',
+              style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                maxLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: InputDecoration(
+                  hintText: 'Update your reflection notes...',
+                  hintStyle: const TextStyle(color: Colors.black38),
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
