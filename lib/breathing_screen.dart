@@ -9,7 +9,7 @@ class BreathingScreen extends StatefulWidget {
 }
 
 class _BreathingScreenState extends State<BreathingScreen> {
-  String selectedTechnique = 'Cycle Sighing';
+  String selectedTechnique = 'Box Breathing';
   String selectedDuration = '10 secs';
   bool isSessionActive = false;
   
@@ -18,7 +18,6 @@ class _BreathingScreenState extends State<BreathingScreen> {
   int _remainingSeconds = 10;
   String _currentInstruction = 'Ready?';
 
-  final List<String> techniques = ['Cycle Sighing', 'Physiological Sigh', 'Box Breathing'];
   final List<String> durations = ['10 secs', '1 min', '3 mins', '5 mins'];
   
   final List<String> activityHistory = [];
@@ -50,30 +49,18 @@ class _BreathingScreenState extends State<BreathingScreen> {
       setState(() {
         if (_remainingSeconds > 1) {
           _remainingSeconds--;
-          
-          // Calculate dynamic breathing phases based on elapsed time (every 4-second cycle)
+
           int elapsed = _totalSeconds - _remainingSeconds;
-          int cycleTime = elapsed % 12; // 12-second block for Box / Cyclic patterns
-          
-          if (selectedTechnique == 'Box Breathing') {
-            if (cycleTime < 3) {
-              _currentInstruction = 'Inhale...';
-            } else if (cycleTime < 6) {
-              _currentInstruction = 'Hold...';
-            } else if (cycleTime < 9) {
-              _currentInstruction = 'Exhale...';
-            } else {
-              _currentInstruction = 'Hold...';
-            }
+          int cycleTime = elapsed % _getCycleDuration();
+
+          if (cycleTime < 4) {
+            _currentInstruction = 'Inhale...';
+          } else if (cycleTime < 8) {
+            _currentInstruction = 'Hold...';
+          } else if (cycleTime < 12) {
+            _currentInstruction = 'Exhale...';
           } else {
-            // Physiological / Cycle Sighing pattern
-            if (cycleTime < 4) {
-              _currentInstruction = 'Deep Inhale...';
-            } else if (cycleTime < 6) {
-              _currentInstruction = 'Quick Top-off Inhale...';
-            } else {
-              _currentInstruction = 'Slow Exhale...';
-            }
+            _currentInstruction = 'Hold...';
           }
         } else {
           _stopTimer();
@@ -85,6 +72,10 @@ class _BreathingScreenState extends State<BreathingScreen> {
         }
       });
     });
+  }
+
+  int _getCycleDuration() {
+    return 16;
   }
 
   void _stopTimer() {
@@ -122,7 +113,7 @@ class _BreathingScreenState extends State<BreathingScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        title: const Text('Breathing Exercises', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Breathing Exercise', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
@@ -130,38 +121,13 @@ class _BreathingScreenState extends State<BreathingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Center-Aligned Technique Dropdown Container
-            Center(
-              child: Container(
-                width: 240,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade800),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedTechnique,
-                    isExpanded: true,
-                    dropdownColor: Colors.grey.shade900,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.cyanAccent),
-                    items: techniques.map((String technique) {
-                      return DropdownMenuItem<String>(
-                        value: technique,
-                        child: Text(technique, textAlign: TextAlign.center),
-                      );
-                    }).toList(),
-                    onChanged: isSessionActive ? null : (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          selectedTechnique = newValue;
-                        });
-                      }
-                    },
-                  ),
-                ),
+            const Text(
+              'Box Breathing',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
             const SizedBox(height: 12),

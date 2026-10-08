@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.11.0+2
+  camera_platform_interface: ^2.8.0
+  speech_to_text: ^7.0.0
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   
