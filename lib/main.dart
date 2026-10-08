@@ -55,9 +55,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
 
-  // Configure GROQ_API_KEY in the Flutter build environment.
-  final String _groqApiKey = "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";
+  // Configure GROQ_API_KEY in the Flutter build environment.   final String _groqApiKey = "YOUR_GROQ_API_KEY_HERE"; // Replace with
 
+final String apiKey = String.fromEnvironment('GROQ_API_KEY', defaultValue: 'YOUR_KEY_HERE');
   // Manage sessions dynamically
   final List<ChatSession> _sessions = [
     ChatSession(title: 'hello', messages: []),
